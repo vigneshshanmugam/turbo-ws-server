@@ -1,0 +1,30 @@
+{
+  "name": "turbo-ws-server",
+  "version": "0.0.0",
+  "description": "Minimal web socket server using turbo",
+  "main": "ws.js",
+  "scripts": {
+    "test": ""
+  },
+  "keywords": [
+    "turbo",
+    "WebSocket",
+    "web socket server"
+  ],
+  "files": [
+    "ws.js"
+  ],
+  "author": "Vignesh Shanmugam <vignesh.shanmugam22@gmail.com> (https://vigneshh.in)",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vigneshshanmugam/turbo-ws-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vigneshshanmugam/turbo-ws-server/issues"
+  },
+  "homepage": "https://github.com/vigneshshanmugam/turbo-ws-server#readme",
+  "license": "MIT",
+  "dependencies": {
+    "turbo-http": "^0.1.1"
+  }
+}
