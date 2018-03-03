@@ -1,11 +1,10 @@
-const net = require("turbo-net");
 const http = require("turbo-http");
 const crypto = require("crypto");
 const { parse } = require("url");
 const HTTP_STATUS = require("turbo-http/http-status");
 
-// Constant used for constructing Sec-WebSocket-Accept response header
-const WS_ID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+// Magic string used for constructing Sec-WebSocket-Accept response header
+const WS_MAGIC_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 class WSServer {
   constructor({ path = "" } = {}) {
@@ -13,55 +12,76 @@ class WSServer {
       if (path !== "" && parse(req.url).pathname !== path) {
         return this.abort(res, 400);
       }
-
       return this.handleUpgrade(req, res);
     });
+    this.supportedVersion = "13";
   }
 
   handleUpgrade(req, res) {
     const headers = req.getAllHeaders();
     const version = headers.get("Sec-WebSocket-Version");
+
+    // https://tools.ietf.org/html/rfc6455#section-4.4
+    if (version !== this.supportedVersion) {
+      return this.abort(res, 400, {
+        "Sec-WebSocket-Version": this.supportedVersion
+      });
+    }
+
     if (
       headers.get("Host") === undefined ||
       req.method !== "GET" ||
       headers.get("Upgrade") !== "websocket" ||
       headers.get("Connection") !== "Upgrade" ||
-      headers.get("Sec-WebSocket-Key") === undefined ||
-      version !== "13"
+      headers.get("Sec-WebSocket-Key") === undefined
     ) {
-      this.abort(res, 400);
+      return this.abort(res, 400);
     }
     this.completeUpgade(req, res, 101);
+    // Now the connection is in open state
+    this.exchange(res);
   }
 
   completeUpgade(req, res, code) {
     const message = Buffer.from(HTTP_STATUS[code]);
     res.statusCode = code;
-    /**
-     *
-     * The value of this header field is constructed by concatenating /key/,
-     * defined above in step 4 in Section 4.2.2, with the string "258EAFA5-
-     * E914-47DA-95CA-C5AB0DC85B11", taking the SHA-1 hash of this
-     * concatenated value to obtain a 20-byte value and base64-encoding
-     */
+    // https://tools.ietf.org/html/rfc6455#section-4.2.2
     const headerKey = req.getAllHeaders().get("Sec-WebSocket-Key");
     const key = crypto
       .createHash("sha1")
-      .update(headerKey + WS_ID)
+      .update(headerKey + WS_MAGIC_STRING)
       .digest("base64");
 
     res.setHeader("Upgrade", "websocket");
     res.setHeader("Connection", "Upgrade");
     res.setHeader("Sec-WebSocket-Accept", key);
-    res.end(message);
+    // Finish the handshake and do not close the connection
+    res.end(Buffer.from(""), 0);
   }
 
-  abort(res, code) {
+  exchange(res) {
+    const socket = res.socket;
+    const readBuffer = Buffer.alloc(32 * 1024);
+    // Start Exchanging Data Formats
+    // https://tools.ietf.org/html/rfc6455#section-5.2
+    socket.read(readBuffer, function onread(err, buf, read) {
+      if (err) {
+        throw err;
+        socket.close();
+      }
+      socket.write(buf, read);
+    });
+  }
+
+  abort(res, code, headers = {}) {
     const message = Buffer.from(HTTP_STATUS[code]);
     res.statusCode = code;
     res.setHeader("Connection", "close");
-    res.setHeader("Content-type", "text/html");
+    res.setHeader("Content-type", "text/plain");
     res.setHeader("Content-Length", message.length);
+    Object.keys(headers).forEach(key => {
+      res.setHeader(key, headers[key]);
+    });
     res.end(message);
   }
 
