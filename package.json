@@ -2,7 +2,7 @@
   "name": "turbo-ws-server",
   "version": "0.0.0",
   "description": "Minimal web socket server using turbo",
-  "main": "ws.js",
+  "main": "index.js",
   "scripts": {
     "test": ""
   },
@@ -12,7 +12,7 @@
     "web socket server"
   ],
   "files": [
-    "ws.js"
+    "index.js"
   ],
   "author": "Vignesh Shanmugam <vignesh.shanmugam22@gmail.com> (https://vigneshh.in)",
   "repository": {
