@@ -6,7 +6,7 @@ const HTTP_STATUS = require("turbo-http/http-status");
 // Magic string used for constructing Sec-WebSocket-Accept response header
 const WS_MAGIC_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-class WSServer {
+module.exports = class WSServer {
   constructor({ path = "" } = {}) {
     this.server = http.createServer((req, res) => {
       if (path !== "" && parse(req.url).pathname !== path) {
@@ -46,7 +46,7 @@ class WSServer {
     const message = Buffer.from(HTTP_STATUS[code]);
     res.statusCode = code;
     // https://tools.ietf.org/html/rfc6455#section-4.2.2
-    const headerKey = req.getAllHeaders().get("Sec-WebSocket-Key");
+    const headerKey = req.getHeader("Sec-WebSocket-Key");
     const key = crypto
       .createHash("sha1")
       .update(headerKey + WS_MAGIC_STRING)
@@ -91,5 +91,3 @@ class WSServer {
     });
   }
 }
-
-new WSServer().start(8080);
